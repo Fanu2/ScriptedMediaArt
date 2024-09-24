@@ -1,37 +1,62 @@
-import os
+import re
 
-def create_srt_from_text(text_file, srt_file, duration_per_line=10):
-    with open(text_file, 'r', encoding='utf-8') as file:
-        lines = [line.strip() for line in file if line.strip()]
 
-    with open(srt_file, 'w', encoding='utf-8') as file:
-        start_time = 0
+def convert_txt_to_srt(input_file, output_file, start_time="00:00:01,000", duration_seconds=10):
+    try:
+        with open(input_file, 'r') as file:
+            content = file.read()
 
-        for i, line in enumerate(lines, start=1):
-            end_time = start_time + duration_per_line
+        # Find all substrings within quotes (inverted commas)
+        subtitles = re.findall(r'\"(.*?)\"', content)
 
-            start_time_formatted = format_time(start_time)
-            end_time_formatted = format_time(end_time)
+        srt_content = []
+        start_time_seconds = convert_time_to_seconds(start_time)
 
-            file.write(f"{i}\n")
-            file.write(f"{start_time_formatted} --> {end_time_formatted}\n")
-            file.write(f"{line}\n\n")
+        for index, subtitle in enumerate(subtitles, start=1):
+            subtitle = subtitle.strip()
+            if subtitle:
+                # Calculate start and end time for each subtitle
+                end_time_seconds = start_time_seconds + duration_seconds
+                start_time_srt = convert_seconds_to_time(start_time_seconds)
+                end_time_srt = convert_seconds_to_time(end_time_seconds)
 
-            start_time = end_time
+                # Add index, time, and subtitle text to the SRT content
+                srt_content.append(f"{index}")
+                srt_content.append(f"{start_time_srt} --> {end_time_srt}")
+                srt_content.append(subtitle)
+                srt_content.append("")  # Blank line between subtitles
 
-def format_time(seconds):
-    hours = seconds // 3600
-    minutes = (seconds % 3600) // 60
-    seconds = seconds % 60
-    milliseconds = int((seconds - int(seconds)) * 1000)
+                # Update start time for the next subtitle
+                start_time_seconds = end_time_seconds
 
-    return f"{int(hours):02}:{int(minutes):02}:{int(seconds):02},{milliseconds:03}"
+        # Write the SRT content to the output file
+        with open(output_file, 'w') as srt_file:
+            srt_file.write("\n".join(srt_content))
 
-# Example usage
-text_file = '/home/jasvir/Pictures/fanu3/fanu.txt'
-srt_file = '/home/jasvir/Pictures/fanu3/fanu.srt'
-duration_per_line = 10  # seconds
+        # This is the corrected print statement:
+        print(f"SRT file created successfully: {output_file}")
 
-create_srt_from_text(text_file, srt_file, duration_per_line)
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
-print(f"SRT file created at {srt_file}")
+
+def convert_time_to_seconds(time_str):
+    h, m, s = time_str.split(':')
+    s, ms = s.split(',')
+    return int(h) * 3600 + int(m) * 60 + int(s) + int(ms) / 1000
+
+
+def convert_seconds_to_time(seconds):
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    ms = int((seconds * 1000) % 1000)
+    return f"{h:02}:{m:02}:{s:02},{ms:03}"
+
+
+if __name__ == "__main__":
+    input_file = "/home/jasvir/Music/jodha9/jodha.txt"
+    output_file = "/home/jasvir/Music/jodha9/new_file.srt"
+
+    # Convert the text file to SRT
+    convert_txt_to_srt(input_file, output_file, start_time="00:00:01,000", duration_seconds=10)
