@@ -1,22 +1,42 @@
-from wand.image import Image
-from wand.sequence import Sequence
+from PIL import Image
+import imageio
+import os
+import tempfile
 
 
-def apply_animation(input_path, output_path):
-    with Image(filename=input_path) as img:
-        # Create a sequence for the animation
-        with Image() as gif:
-            for i in range(10):
-                frame = img.clone()
-                frame.rotate(45 * i)  # Example transformation, rotate each frame
-                gif.sequence.append(frame)
-
-            gif.type = 'optimize'
-            gif.save(filename=output_path)
+def resize_image(image_path, target_size=(800, 600)):
+    img = Image.open(image_path)
+    img_resized = img.resize(target_size, Image.ANTIALIAS)  # Resize to target size with anti-aliasing
+    return img_resized
 
 
-# Example usage
-input_image_path = '/home/jasvir/Pictures/Triza/triza.jpg'  # Replace with the actual path to your input image
-output_image_path = '/home/jasvir/Pictures/Triza/output.gif'  # Replace with the desired path for your output image
+def create_animated_gif(image_folder, output_gif, duration=0.5):
+    images = []
+    temp_files = []
 
-apply_animation(input_image_path, output_image_path)
+    for filename in sorted(os.listdir(image_folder)):
+        if filename.endswith('.png') or filename.endswith('.jpg'):
+            file_path = os.path.join(image_folder, filename)
+            img_resized = resize_image(file_path)  # Resize each image to ensure uniform dimensions
+
+            # Save resized image to a temporary file
+            temp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+            temp_files.append(temp_file.name)
+            img_resized.save(temp_file.name)
+
+            # Append the temporary file path to the images list
+            images.append(temp_file.name)
+
+    # Create animated GIF from the list of temporary file paths
+    imageio.mimsave(output_gif, [imageio.imread(image) for image in images], duration=duration)
+
+    # Clean up temporary files
+    for temp_file in temp_files:
+        os.remove(temp_file)
+
+
+# Example usage:
+image_folder = '/home/jasvir/Documents/Slide show6/'
+output_gif = '/home/jasvir/Documents/Slide show6.gif'
+
+create_animated_gif(image_folder, output_gif, duration=0.5)
